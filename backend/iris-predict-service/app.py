@@ -365,16 +365,30 @@ with gr.Blocks(
                     output_probs = gr.HTML(value=initial_pred_bars, label="機率分析")
             
             # 綁定即時變更事件 (Slider 變動時即時進行預測)
-            # 注意：此處刻意設定 queue=False。
-            # 預測僅是毫秒級的 CPU 運算，不需要佇列排程。若走 Gradio 佇列，結果會透過 SSE
-            # (Server-Sent Events) 長連線回傳；在 Render 這類會緩衝長連線的反向代理環境下，
-            # 拖動滑桿時每一格都得走「建立 SSE → 排隊 → 回傳 → 關閉」一輪，畫面會顯示
-            # `queue: 1/1` 且反應明顯延遲。改走一般 HTTP 請求即可恢復即時回饋。
+            # queue=False：預測僅是毫秒級的 CPU 運算，不需要佇列排程。若走 Gradio 佇列，
+            #   結果會透過 SSE (Server-Sent Events) 長連線回傳；在 Render 這類會緩衝長連線的
+            #   反向代理環境下，拖動滑桿時每一格都得走「建立 SSE → 排隊 → 回傳 → 關閉」一輪，
+            #   畫面會顯示 `queue: 1/1` 且反應明顯延遲。改走一般 HTTP 請求即可恢復即時回饋。
+            # show_progress="hidden"：Gradio 6 的事件預設 show_progress="full"，會在每次滑桿
+            #   變動時於右邊輸出元件蓋上一層載入/進度動畫。快速拖動時每一格都閃一次覆蓋層，
+            #   看起來就像卡在 queue。設為 hidden 後長條可平順即時更新，不再閃爍。
             inputs = [sepal_len, sepal_wid, petal_len, petal_wid]
             outputs = [output_card, output_probs]
             for slider in inputs:
-                slider.change(fn=predict_gradio_handler, inputs=inputs, outputs=outputs, queue=False)
-            predict_btn.click(fn=predict_gradio_handler, inputs=inputs, outputs=outputs, queue=False)
+                slider.change(
+                    fn=predict_gradio_handler,
+                    inputs=inputs,
+                    outputs=outputs,
+                    queue=False,
+                    show_progress="hidden",
+                )
+            predict_btn.click(
+                fn=predict_gradio_handler,
+                inputs=inputs,
+                outputs=outputs,
+                queue=False,
+                show_progress="hidden",
+            )
             
         # --- 分頁二：線上訓練 ---
         with gr.Tab("⚙️ 線上模型訓練與評估"):
@@ -395,10 +409,17 @@ with gr.Blocks(
                     importance_chart = gr.HTML(value=initial_importance, label="特徵重要性圖表")
             
             # 綁定訓練按鈕事件
+            # queue=False：Iris 隨機森林訓練是毫秒級運算(即使 500 棵樹也 <1 秒)，
+            #   不需要佇列排程。若走 Gradio 佇列，結果會透過 SSE 長連線回傳；在 Render
+            #   這類會緩衝長連線的反向代理下，串流回不來，畫面會卡在 `queue: 1/1 | 秒數`
+            #   一直計時、右欄被灰色遮罩蓋住(結果實際上早已算完)。改走一般 HTTP 即可正常回傳。
+            # show_progress="minimal"：以頂端細進度條取代整欄的灰色載入遮罩，提供輕量回饋。
             train_btn.click(
                 fn=train_gradio_handler,
                 inputs=[n_est, m_depth, t_size, seed],
-                outputs=[train_status, metrics_card, importance_chart]
+                outputs=[train_status, metrics_card, importance_chart],
+                queue=False,
+                show_progress="minimal",
             )
 
 # 設定主題（避免 Gradio 6.0 的 Blocks 建構警告）
