@@ -1,62 +1,122 @@
 import { useState } from 'react'
-import PredictTab from './components/PredictTab'
-import TrainTab from './components/TrainTab'
-import type { TabType } from './types'
+import reactLogo from './assets/react.svg'
+import viteLogo from './assets/vite.svg'
+import heroImg from './assets/hero.png'
+import './App.css'
 
-const TABS: { key: TabType; label: string; emoji: string }[] = [
-  { key: 'predict', label: '即時模型預測', emoji: '🔮' },
-  { key: 'train', label: '線上模型訓練', emoji: '⚙️' },
-]
-
-export default function App() {
-  const [activeTab, setActiveTab] = useState<TabType>('predict')
+function App() {
+  const [count, setCount] = useState(0)
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-indigo-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
-      {/* Header */}
-      <header className="border-b border-gray-200 dark:border-gray-800 bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl sticky top-0 z-30">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 sm:py-5">
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">
-            🌸 Iris 鳶尾花機器學習平台
-          </h1>
-          <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400 mt-1 max-w-2xl">
-            結合 <span className="font-semibold text-indigo-600 dark:text-indigo-400">FastAPI</span> 後端與
-            <span className="font-semibold text-emerald-600 dark:text-emerald-400"> React</span> 前端的互動式 ML 部署平台。
-            輸入花瓣特徵即時預測品種，或線上調整超參數重新訓練模型。
+    <>
+      <section id="center">
+        <div className="hero">
+          <img src={heroImg} className="base" width="170" height="179" alt="" />
+          <img src={reactLogo} className="framework" alt="React logo" />
+          <img src={viteLogo} className="vite" alt="Vite logo" />
+        </div>
+        <div>
+          <h1>Get started</h1>
+          <p>
+            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
           </p>
         </div>
-      </header>
+        <button
+          type="button"
+          className="counter"
+          onClick={() => setCount((count) => count + 1)}
+        >
+          Count is {count}
+        </button>
+      </section>
 
-      {/* Tab Bar */}
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 mt-6">
-        <div className="flex bg-gray-100 dark:bg-gray-800 rounded-xl p-1 gap-1">
-          {TABS.map(tab => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={`flex-1 py-2.5 sm:py-3 rounded-lg text-sm sm:text-base font-bold transition-all duration-200 cursor-pointer ${
-                activeTab === tab.key
-                  ? 'bg-white dark:bg-gray-700 text-indigo-700 dark:text-indigo-300 shadow-md'
-                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-              }`}
-            >
-              {tab.emoji} {tab.label}
-            </button>
-          ))}
+      <div className="ticks"></div>
+
+      <section id="next-steps">
+        <div id="docs">
+          <svg className="icon" role="presentation" aria-hidden="true">
+            <use href="/icons.svg#documentation-icon"></use>
+          </svg>
+          <h2>Documentation</h2>
+          <p>Your questions, answered</p>
+          <ul>
+            <li>
+              <a href="https://vite.dev/" target="_blank">
+                <img className="logo" src={viteLogo} alt="" />
+                Explore Vite
+              </a>
+            </li>
+            <li>
+              <a href="https://react.dev/" target="_blank">
+                <img className="button-icon" src={reactLogo} alt="" />
+                Learn more
+              </a>
+            </li>
+          </ul>
         </div>
-      </div>
-
-      {/* Content */}
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        {activeTab === 'predict' ? <PredictTab /> : <TrainTab />}
-      </main>
-
-      {/* Footer */}
-      <footer className="border-t border-gray-200 dark:border-gray-800 mt-auto">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 text-center text-xs text-gray-400 dark:text-gray-500">
-          Iris ML Platform &middot; FastAPI + React + TypeScript + TailwindCSS
+        <div id="social">
+          <svg className="icon" role="presentation" aria-hidden="true">
+            <use href="/icons.svg#social-icon"></use>
+          </svg>
+          <h2>Connect with us</h2>
+          <p>Join the Vite community</p>
+          <ul>
+            <li>
+              <a href="https://github.com/vitejs/vite" target="_blank">
+                <svg
+                  className="button-icon"
+                  role="presentation"
+                  aria-hidden="true"
+                >
+                  <use href="/icons.svg#github-icon"></use>
+                </svg>
+                GitHub
+              </a>
+            </li>
+            <li>
+              <a href="https://chat.vite.dev/" target="_blank">
+                <svg
+                  className="button-icon"
+                  role="presentation"
+                  aria-hidden="true"
+                >
+                  <use href="/icons.svg#discord-icon"></use>
+                </svg>
+                Discord
+              </a>
+            </li>
+            <li>
+              <a href="https://x.com/vite_js" target="_blank">
+                <svg
+                  className="button-icon"
+                  role="presentation"
+                  aria-hidden="true"
+                >
+                  <use href="/icons.svg#x-icon"></use>
+                </svg>
+                X.com
+              </a>
+            </li>
+            <li>
+              <a href="https://bsky.app/profile/vite.dev" target="_blank">
+                <svg
+                  className="button-icon"
+                  role="presentation"
+                  aria-hidden="true"
+                >
+                  <use href="/icons.svg#bluesky-icon"></use>
+                </svg>
+                Bluesky
+              </a>
+            </li>
+          </ul>
         </div>
-      </footer>
-    </div>
+      </section>
+
+      <div className="ticks"></div>
+      <section id="spacer"></section>
+    </>
   )
 }
+
+export default App
