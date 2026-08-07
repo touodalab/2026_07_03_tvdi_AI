@@ -1,20 +1,24 @@
+# ============================================
+# 0. 載入套件與環境設定
+# ============================================
+
 import os
 import sys
-from train_save import train_and_save_model
-from pydantic import BaseModel,Field
-from pprint import pprint
-import joblib
-from fastapi import FastAPI,HTTPException
-import uvicorn
-
 
 current_dir = os.getcwd()
 if current_dir not in sys.path:
     sys.path.insert(0, current_dir)
 
-model_path = os.path.join(current_dir, "salary_model.joblib")
-MODEL_STATE = {}
+from train_save import train_and_save_model
 
+print("環境準備完畢，已成功載入 train_and_save_model 模組。")
+
+# ============================================
+# 定義 Pydantic 訓練相關模型（與 app.py 相同）
+# ============================================
+
+from pydantic import BaseModel,Field
+from pprint import pprint
 
 class TrainConfig(BaseModel):
     test_size: float = Field(0.2, description="測試集分割比例", ge=0.1 , le=0.5)
@@ -32,6 +36,27 @@ class TrainResult(BaseModel):
     alpha: float = Field(..., description="正則化強度 alpha")
     train_time: float = Field(..., description="訓練耗時 (秒)")
     message:str = Field(..., description="提示訊息")
+
+print("TranConfig(BaseModel)")
+pprint(TrainConfig.model_json_schema())
+print("==============================")
+print("TrainResult(BaseModel)")
+pprint(TrainResult.model_json_schema())
+
+from train_save import train_and_save_model
+res_ridge:dict = train_and_save_model(
+    test_size=0.2,
+    random_state=76,
+    model_type="Ridge",
+    alpha=10.0
+)
+pprint(res_ridge)
+
+import joblib
+
+current_dir = os.getcwd()
+model_path = os.path.join(current_dir, "salary_model.joblib")
+MODEL_STATE = {}
 
 def load_model_state():
     global MODEL_STATE
@@ -53,12 +78,13 @@ def load_model_state():
             "alpha": model_data.get("alpha")
         }
     )
+    print(f"✅ MODEL_STATE 已成功更新！當前模型：{MODEL_STATE['model_type']}，R² Score：{MODEL_STATE['r2']:.4f}")
 
 load_model_state()
 
-app = FastAPI()
-@app.post("/train", response_model=TrainResult)
-def train_endpoint(config:TrainConfig):
+from fastapi import HTTPException
+
+def train_api(config:TrainConfig) -> dict:
     """
     訓練端點：傳入測試集比例、隨機種子、模型類型與 alpha，線上重新訓練模型，並即時更新服務所使用的模型。
     """
@@ -76,6 +102,24 @@ def train_endpoint(config:TrainConfig):
         raise HTTPException(status_code=500, detail=f"線上訓練失敗: {str(e)}")
 
     return res
-    
-if __name__ == "__main__":
-    uvicorn.run("app:app", reload=True)
+
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+
+mini_api = FastAPI()
+@mini_api.post("/train", response_model=TrainResult)
+def train_endpoint(config:TrainConfig):
+    res = train_api(config=config)
+    return res
+
+client = TestClient(mini_api)
+response = client.post("/train", json={
+    "test_size": 0.2,
+    "random_state": 76,
+    "model_type": "Lasso",
+    "alpha": 5.0
+})
+print("【重訓 Lasso 結果】")
+print("HTTP 狀態碼:", response.status_code)
+pprint(response.json())
+   

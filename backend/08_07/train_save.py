@@ -128,6 +128,7 @@ def train_and_save_model(
         "intercept": float(intercept),
         "model_type": model_type_clean,
         "alpha": float(alpha),
+        "feature_coefs":feature_coefs,
         "train_time": float(train_time),
         "message":f"{actual_model_name} 模型訓練完成並儲存成功！"
     }
