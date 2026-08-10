@@ -206,49 +206,49 @@ RWD_CSS = """
 # ============================================
 
 def make_prediction_card(pred: float, model_type: str, r2: float) -> str:
-    """薪資預測結果卡片 (綠底卡片，風格與 Iris 的『品種預測卡片』一致)"""
+    """薪資預測結果卡片 (綠底卡片，風格與 Iris 的『品種預測卡片』一致)。
+    全部使用 inline style，確保手機/深色模式下文字仍為黑色且不會被 Gradio 主題蓋掉。"""
     monthly = pred * 10000 / 12
     return f"""
-    <div class="rwd-card" style="background-color: #e6f4ea; border-color: rgba(19, 115, 51, 0.25);">
-        <span class="rwd-tag">📊 預測年薪</span>
-        <h2>NT$ {pred:,.2f} 萬</h2>
-        <span class="rwd-sub">折合月薪約 <strong>NT$ {monthly:,.0f}</strong> 元 / 月</span>
+    <div style="background-color:#e6f4ea;color:#111111;padding:20px;border-radius:12px;border:1.5px solid rgba(19,115,51,.25);text-align:center;margin-bottom:14px;box-shadow:0 4px 12px rgba(0,0,0,.06);max-width:100%;box-sizing:border-box;">
+        <div style="font-size:14px;font-weight:bold;letter-spacing:1.5px;color:#111111;text-transform:uppercase;">📊 預測年薪</div>
+        <div style="font-size:clamp(24px,8vw,36px);font-weight:800;margin:8px 0;color:#111111;line-height:1.2;word-break:break-word;">NT$ {pred:,.2f} 萬</div>
+        <div style="font-size:16px;font-weight:500;color:#111111;">折合月薪約 <strong style="font-size:20px;color:#111111;">NT$ {monthly:,.0f}</strong> 元 / 月</div>
     </div>
-    <div class="rwd-info-strip">
-        <span>🤖 模型演算法: <strong>{model_type}</strong></span>
-        <span>📈 模型 R² Score: <strong>{r2:.4f}</strong></span>
+    <div style="display:flex;flex-wrap:wrap;gap:8px 22px;font-size:14px;color:#111111;background:#f1f3f4;padding:12px 18px;border-radius:8px;border:1px solid #e0e0e0;font-weight:500;margin-bottom:16px;max-width:100%;box-sizing:border-box;">
+        <span style="color:#111111;">🤖 模型演算法: <strong style="color:#111111;">{model_type}</strong></span>
+        <span style="color:#111111;">📈 模型 R² Score: <strong style="color:#111111;">{r2:.4f}</strong></span>
     </div>
     """
 
 
 def make_contribution_bars(contrib: dict[str, float]) -> str:
-    """各特徵對預測薪資的貢獻度橫條圖 (正貢獻綠色、負貢獻紅色)"""
+    """各特徵對預測薪資的貢獻度橫條圖 (正貢獻綠色、負貢獻紅色)。全部 inline style。"""
     if not contrib:
-        return "<div class='rwd-error'>目前尚無特徵貢獻資料</div>"
+        return "<div style='background:#fce8e6;color:#c5221f;padding:20px;border-radius:12px;text-align:center;font-weight:600;'>⚠️ 目前尚無特徵貢獻資料</div>"
     max_abs = max(abs(v) for v in contrib.values()) or 1.0
-    html = '<div class="rwd-bars">'
+    items = []
     for feat, val in contrib.items():
         pct = abs(val) / max_abs * 100
         color = "#137333" if val >= 0 else "#c5221f"
         sign = "+" if val >= 0 else "-"
         label = FEATURE_LABELS.get(feat, feat)
-        html += f"""
-        <div class="rwd-bar-row">
-            <div class="rwd-bar-info">
-                <span>{label}</span>
-                <span>{sign}NT$ {abs(val):,.2f} 萬</span>
+        items.append(f"""
+        <div style="width:100%;">
+            <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px 8px;margin-bottom:5px;font-weight:600;font-size:14px;color:#111111;">
+                <span style="color:#111111;">{label}</span>
+                <span style="color:#111111;white-space:nowrap;">{sign}NT$ {abs(val):,.2f} 萬</span>
             </div>
-            <div class="rwd-bar-track">
-                <div class="rwd-bar-fill" style="background-color: {color}; width: {pct:.1f}%;"></div>
+            <div style="background-color:#f1f3f4;border-radius:8px;height:12px;overflow:hidden;width:100%;">
+                <div style="background-color:{color};width:{pct:.1f}%;height:100%;border-radius:8px;"></div>
             </div>
-        </div>
-        """
-    html += "</div>"
-    return html
+        </div>""")
+    return ('<div style="display:flex;flex-direction:column;gap:14px;margin-top:4px;'
+            'width:100%;max-width:100%;box-sizing:border-box;">' + "".join(items) + "</div>")
 
 
 def make_metrics_card(info: dict) -> str:
-    """訓練評估指標卡片網格 (R² / 訓練耗時 / 正則化強度)"""
+    """訓練評估指標卡片網格 (R² / 訓練耗時 / 正則化強度)。全部 inline style。"""
     r2 = info.get("r2")
     train_time = info.get("train_time")
     alpha = info.get("alpha")
@@ -260,58 +260,56 @@ def make_metrics_card(info: dict) -> str:
     test_size = info.get("test_size")
     seed = info.get("random_state")
     return f"""
-    <div class="rwd-metrics">
-        <div class="rwd-metric">
-            <div class="rwd-label">測試集 R²</div>
-            <div class="rwd-value" style="color: #1a73e8;">{r2_str}</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;margin-bottom:16px;max-width:100%;box-sizing:border-box;">
+        <div style="background-color:#f8f9fa;padding:16px 10px;border-radius:10px;text-align:center;border:1px solid #e0e0e0;box-shadow:0 2px 6px rgba(0,0,0,.02);">
+            <div style="font-size:12px;color:#111111;font-weight:bold;letter-spacing:.5px;text-transform:uppercase;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">測試集 R²</div>
+            <div style="font-size:26px;font-weight:800;color:#1a73e8;margin-top:5px;line-height:1.2;">{r2_str}</div>
         </div>
-        <div class="rwd-metric">
-            <div class="rwd-label">模型訓練耗時</div>
-            <div class="rwd-value" style="color: #137333;">{time_str}</div>
+        <div style="background-color:#f8f9fa;padding:16px 10px;border-radius:10px;text-align:center;border:1px solid #e0e0e0;box-shadow:0 2px 6px rgba(0,0,0,.02);">
+            <div style="font-size:12px;color:#111111;font-weight:bold;letter-spacing:.5px;text-transform:uppercase;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">模型訓練耗時</div>
+            <div style="font-size:26px;font-weight:800;color:#137333;margin-top:5px;line-height:1.2;">{time_str}</div>
         </div>
-        <div class="rwd-metric">
-            <div class="rwd-label">正則化強度</div>
-            <div class="rwd-value" style="color: #ab47bc;">{alpha_str}</div>
+        <div style="background-color:#f8f9fa;padding:16px 10px;border-radius:10px;text-align:center;border:1px solid #e0e0e0;box-shadow:0 2px 6px rgba(0,0,0,.02);">
+            <div style="font-size:12px;color:#111111;font-weight:bold;letter-spacing:.5px;text-transform:uppercase;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">正則化強度</div>
+            <div style="font-size:26px;font-weight:800;color:#ab47bc;margin-top:5px;line-height:1.2;">{alpha_str}</div>
         </div>
     </div>
-    <div class="rwd-info-strip">
-        <span>🤖 模型演算法: <strong>{model_type}</strong></span>
-        <span>📐 截距 (intercept): <strong>{intercept:.4f}</strong></span>
-        <span>🗂️ 測試集比例: <strong>{test_size}</strong></span>
-        <span>🎲 隨機種子: <strong>{seed}</strong></span>
+    <div style="display:flex;flex-wrap:wrap;gap:8px 22px;font-size:14px;color:#111111;background:#f1f3f4;padding:12px 18px;border-radius:8px;border:1px solid #e0e0e0;font-weight:500;max-width:100%;box-sizing:border-box;">
+        <span style="color:#111111;">🤖 模型演算法: <strong style="color:#111111;">{model_type}</strong></span>
+        <span style="color:#111111;">📐 截距 (intercept): <strong style="color:#111111;">{intercept:.4f}</strong></span>
+        <span style="color:#111111;">🗂️ 測試集比例: <strong style="color:#111111;">{test_size}</strong></span>
+        <span style="color:#111111;">🎲 隨機種子: <strong style="color:#111111;">{seed}</strong></span>
     </div>
     """
 
 
 def make_coef_chart(feature_coefs: dict[str, float]) -> str:
-    """特徵權重係數橫條圖 (Feature Coefficients)"""
+    """特徵權重係數橫條圖 (Feature Coefficients)。全部 inline style。"""
     if not feature_coefs:
-        return "<p style='color:#5f6368; text-align:center; padding:20px;'>目前無特徵權重資料</p>"
+        return "<p style='color:#111111;text-align:center;padding:20px;'>目前無特徵權重資料</p>"
     max_abs = max(abs(v) for v in feature_coefs.values()) or 1.0
-    html = '<h4 class="rwd-chart-title">⚖️ 特徵權重係數 (Feature Coefficients)</h4>'
-    html += '<div class="rwd-bars">'
+    items = ['<div style="font-size:16px;font-weight:700;color:#111111;margin-bottom:10px;">⚖️ 特徵權重係數 (Feature Coefficients)</div>']
     for feat, val in feature_coefs.items():
         pct = abs(val) / max_abs * 100
         color = "#1a73e8" if val >= 0 else "#e37400"
         sign = "+" if val >= 0 else "-"
         label = FEATURE_LABELS.get(feat, feat)
-        html += f"""
-        <div class="rwd-bar-row">
-            <div class="rwd-bar-info">
-                <span>{label}</span>
-                <span>{sign}{abs(val):,.4f}</span>
+        items.append(f"""
+        <div style="width:100%;">
+            <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px 8px;margin-bottom:5px;font-weight:600;font-size:14px;color:#111111;">
+                <span style="color:#111111;">{label}</span>
+                <span style="color:#111111;white-space:nowrap;">{sign}{abs(val):,.4f}</span>
             </div>
-            <div class="rwd-bar-track">
-                <div class="rwd-bar-fill" style="background-color: {color}; width: {pct:.1f}%;"></div>
+            <div style="background-color:#f1f3f4;border-radius:8px;height:12px;overflow:hidden;width:100%;">
+                <div style="background-color:{color};width:{pct:.1f}%;height:100%;border-radius:8px;"></div>
             </div>
-        </div>
-        """
-    html += "</div>"
-    return html
+        </div>""")
+    return ('<div style="display:flex;flex-direction:column;gap:12px;margin-top:4px;'
+            'width:100%;max-width:100%;box-sizing:border-box;">' + "".join(items) + "</div>")
 
 
 def make_error_html(msg: str) -> str:
-    return f"<div class='rwd-error'>⚠️ {msg}</div>"
+    return f"<div style='background:#fce8e6;color:#c5221f;padding:20px;border-radius:12px;border:1.5px solid rgba(197,34,31,.3);text-align:center;font-weight:600;'>⚠️ {msg}</div>"
 
 
 # ============================================

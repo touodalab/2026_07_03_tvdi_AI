@@ -30,6 +30,20 @@ FEATURE_LABELS = {
 # 在桌機/平板/手機不同螢幕寬度下自動重排。
 RWD_CSS = """
 <style>
+/* ---------- 強制深色文字：避免手機深色模式(Android)下白字配淺底而看不見 ---------- */
+.rwd-card,
+.rwd-card h2,
+.rwd-card span,
+.rwd-card strong,
+.rwd-card .rwd-tag,
+.rwd-card .rwd-sub,
+.rwd-bars .rwd-bar-info span,
+.rwd-info-strip,
+.rwd-info-strip strong,
+.rwd-metric .rwd-label,
+.rwd-chart-title {
+    color: #111111 !important;
+}
 /* ---------- 通用卡片 ---------- */
 .rwd-card {
     padding: 22px;
@@ -147,16 +161,22 @@ RWD_CSS = """
     font-weight: 600;
 }
 
-/* ---------- 響應式斷點 ---------- */
+/* ---------- 響應式斷點：手機/平板 強制單欄 ---------- */
+/* 注意：Gradio 6 的 Row 使用 .row (flexbox)，非舊版 .gradio-row (grid) */
 @media (max-width: 900px) {
-    .gradio-container .gradio-row {
-        grid-template-columns: 1fr !important;
+    .gradio-container .row:has(> .column) {
+        flex-direction: column;
+    }
+    .gradio-container .row:has(> .column) > .column {
+        min-width: 100% !important;
     }
 }
 @media (max-width: 640px) {
     .rwd-card { padding: 16px; }
     .rwd-info-strip { flex-direction: column; gap: 6px; }
     .rwd-metrics { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
+    .rwd-bars { gap: 10px; }
+    .rwd-bar-info { flex-wrap: wrap; }
 }
 </style>
 """
