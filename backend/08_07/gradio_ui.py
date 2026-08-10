@@ -11,7 +11,57 @@ import gradio as gr
 # ============================================
 # 0. 後端 API 連線設定
 # ============================================
+import time
+
 API_BASE = os.environ.get("SALARY_API_BASE", "http://127.0.0.1:8000")
+
+# 喚醒後端的最長等待秒數 (Render 免費方案冷啟動可能需 1~2 分鐘)
+BACKEND_WAKE_MAX = int(os.environ.get("BACKEND_WAKE_MAX", "120"))
+
+
+def wake_up_backend(max_wait: int = BACKEND_WAKE_MAX, request_timeout: int = 5) -> bool:
+    """啟動時喚醒 Render 後端並等待其就緒。
+
+    Render 免費方案在閒置後會讓 Web Service 休眠，第一次連線會觸發冷啟動
+    (約 30~120 秒)。此函式會持續呼叫後端健康檢查 (GET /)，直到後端回應成功。
+    """
+    if os.environ.get("SKIP_BACKEND_WAKE") == "1":
+        return True
+    url = f"{API_BASE}/"
+    deadline = time.monotonic() + max_wait
+    attempt = 0
+    while time.monotonic() < deadline:
+        attempt += 1
+        try:
+            resp = requests.get(url, timeout=request_timeout)
+            if resp.ok:
+                print(f"[WakeUp] ✅ 後端已就緒: {API_BASE} (第 {attempt} 次嘗試)")
+                return True
+        except requests.RequestException:
+            pass
+        wait = min(1.5 * attempt, 8)
+        print(f"[WakeUp] ⏳ 等待後端啟動中 ({API_BASE})，第 {attempt} 次，{wait:.0f}s 後重試…")
+        time.sleep(wait)
+    print(f"[WakeUp] ❌ 等待逾時 ({max_wait}s)，後端仍無法連線: {API_BASE}")
+    return False
+
+
+def request_json(method: str, path: str, payload: dict | None = None, timeout: int = 30) -> dict:
+    """呼叫後端 API；若第一次連線失敗(後端休眠)則喚醒後端並重試一次。"""
+    def _do():
+        if method.upper() == "GET":
+            resp = requests.get(f"{API_BASE}{path}", timeout=timeout)
+        else:
+            resp = requests.post(f"{API_BASE}{path}", json=payload, timeout=timeout)
+        resp.raise_for_status()
+        return resp.json()
+    try:
+        return _do()
+    except requests.RequestException as first_err:
+        print(f"[WakeUp] 首次連線失敗 ({first_err})，嘗試喚醒後端後重試…")
+        wake_up_backend()
+        return _do()
+
 
 EDU_CHOICES = ["高中以下", "大學", "碩士以上"]
 CITY_CHOICES = ["城市A", "城市B", "城市C"]
@@ -317,9 +367,8 @@ def make_error_html(msg: str) -> str:
 # ============================================
 
 def _post_json(path: str, payload: dict, timeout: int = 120):
-    resp = requests.post(f"{API_BASE}{path}", json=payload, timeout=timeout)
-    resp.raise_for_status()
-    return resp.json()
+    """後端在 Render 休眠時會先喚醒並等待就緒，再重試一次。"""
+    return request_json("POST", path, payload=payload, timeout=timeout)
 
 
 def predict_gradio_handler(years_exp, edu, city):
@@ -374,11 +423,9 @@ def train_gradio_handler(model_type, alpha, test_size, random_state):
 
 
 def fetch_model_info():
-    """取得目前模型狀態 (供初始畫面使用)"""
+    """取得目前模型狀態 (供初始畫面使用)，後端休眠時會先喚醒。"""
     try:
-        resp = requests.get(f"{API_BASE}/model-info", timeout=10)
-        resp.raise_for_status()
-        return resp.json()
+        return request_json("GET", "/model-info", timeout=10)
     except requests.RequestException:
         return None
 
@@ -386,6 +433,8 @@ def fetch_model_info():
 # ============================================
 # 4. 初始畫面內容 (後端未啟動則顯示佔位內容)
 # ============================================
+# 啟動前端時先喚醒 Render 後端 (含冷啟動等待)，再載入初始資料
+wake_up_backend()
 info = fetch_model_info()
 if info:
     initial_metrics = make_metrics_card(info)
@@ -402,13 +451,10 @@ else:
     default_model, default_alpha, default_test_size, default_seed = "LinearRegression", 1.0, 0.2, 76
 
 try:
-    pred_resp = requests.post(
-        f"{API_BASE}/predict",
-        json={"YearsExperience": 5.0, "EducationLevel": "大學", "City": "城市A"},
-        timeout=10,
-    )
-    pred_resp.raise_for_status()
-    pred_data = pred_resp.json()
+    pred_resp = _post_json("/predict", {
+        "YearsExperience": 5.0, "EducationLevel": "大學", "City": "城市A",
+    }, timeout=30)
+    pred_data = pred_resp
     initial_card = make_prediction_card(
         pred_data["predicted_salary"], pred_data["model_type"], pred_data["r2"]
     )
