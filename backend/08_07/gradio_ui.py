@@ -12,6 +12,7 @@ import gradio as gr
 # 0. 後端 API 連線設定
 # ============================================
 import time
+import threading
 
 API_BASE = os.environ.get("SALARY_API_BASE", "http://127.0.0.1:8000")
 
@@ -61,6 +62,27 @@ def request_json(method: str, path: str, payload: dict | None = None, timeout: i
         print(f"[WakeUp] 首次連線失敗 ({first_err})，嘗試喚醒後端後重試…")
         wake_up_backend()
         return _do()
+
+
+# 後端保活間隔秒數：前端執行期間持續 ping 後端，避免 Render 後端再度休眠
+BACKEND_KEEPALIVE_INTERVAL = int(os.environ.get("BACKEND_KEEPALIVE_INTERVAL", "30"))
+
+
+def _keepalive_loop(interval: int = BACKEND_KEEPALIVE_INTERVAL):
+    """背景執行緒：在前端程式存續期間，定期呼叫後端健康檢查保持其甦醒。"""
+    while True:
+        try:
+            requests.get(f"{API_BASE}/", timeout=5)
+        except requests.RequestException:
+            pass
+        time.sleep(interval)
+
+
+def start_backend_keepalive(interval: int = BACKEND_KEEPALIVE_INTERVAL) -> None:
+    """前端啟動時開啟『後端保活』背景執行緒 (daemon，程式結束即停止)。"""
+    t = threading.Thread(target=_keepalive_loop, args=(interval,), daemon=True, name="backend-keepalive")
+    t.start()
+    print(f"[KeepAlive] 已啟動後端保活，每 {interval}s ping {API_BASE}/")
 
 
 EDU_CHOICES = ["高中以下", "大學", "碩士以上"]
@@ -433,8 +455,10 @@ def fetch_model_info():
 # ============================================
 # 4. 初始畫面內容 (後端未啟動則顯示佔位內容)
 # ============================================
-# 啟動前端時先喚醒 Render 後端 (含冷啟動等待)，再載入初始資料
+# 啟動前端時先喚醒 Render 後端 (含冷啟動等待)，再載入初始資料；
+# 並開啟保活執行緒，讓後端在服務期間保持甦醒
 wake_up_backend()
+start_backend_keepalive()
 info = fetch_model_info()
 if info:
     initial_metrics = make_metrics_card(info)
