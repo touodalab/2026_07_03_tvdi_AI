@@ -33,6 +33,11 @@ FEATURE_LABELS = {
 RWD_CSS = """
 <style>
 /* ---------- 通用預測卡片 (仿 Iris 風格) ---------- */
+.rwd-card, .rwd-bars, .rwd-info-strip, .rwd-metrics {
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow-wrap: break-word;
+}
 .rwd-card {
     padding: 22px;
     border-radius: 12px;
@@ -162,9 +167,13 @@ RWD_CSS = """
 }
 
 /* ---------- 響應式斷點：手機/平板 強制單欄 ---------- */
+/* 注意：Gradio 6 的 Row 使用 .row (flexbox) 類別，非舊版的 .gradio-row (grid) */
 @media (max-width: 900px) {
-    .gradio-container .gradio-row {
-        grid-template-columns: 1fr !important;
+    .gradio-container .row {
+        flex-direction: column;
+    }
+    .gradio-container .row > * {
+        min-width: 100% !important;
     }
 }
 @media (max-width: 640px) {
@@ -172,6 +181,7 @@ RWD_CSS = """
     .rwd-info-strip { flex-direction: column; gap: 6px; }
     .rwd-metrics { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
     .rwd-bars { gap: 10px; }
+    .rwd-bar-info { flex-wrap: wrap; }
 }
 </style>
 """
