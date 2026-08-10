@@ -38,6 +38,20 @@ RWD_CSS = """
     box-sizing: border-box;
     overflow-wrap: break-word;
 }
+/* 強制所有自訂卡片文字為深色，避免 Gradio 主題(尤其手機深色模式)把文字蓋成白色 */
+.rwd-card,
+.rwd-card h2,
+.rwd-card span,
+.rwd-card strong,
+.rwd-card .rwd-tag,
+.rwd-card .rwd-sub,
+.rwd-bars .rwd-bar-info span,
+.rwd-info-strip,
+.rwd-info-strip strong,
+.rwd-metric .rwd-label,
+.rwd-chart-title {
+    color: #111111 !important;
+}
 .rwd-card {
     padding: 22px;
     border-radius: 12px;
@@ -195,7 +209,7 @@ def make_prediction_card(pred: float, model_type: str, r2: float) -> str:
     """薪資預測結果卡片 (綠底卡片，風格與 Iris 的『品種預測卡片』一致)"""
     monthly = pred * 10000 / 12
     return f"""
-    <div class="rwd-card" style="background-color: #e6f4ea; color: #137333;">
+    <div class="rwd-card" style="background-color: #e6f4ea; border-color: rgba(19, 115, 51, 0.25);">
         <span class="rwd-tag">📊 預測年薪</span>
         <h2>NT$ {pred:,.2f} 萬</h2>
         <span class="rwd-sub">折合月薪約 <strong>NT$ {monthly:,.0f}</strong> 元 / 月</span>
