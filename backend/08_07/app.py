@@ -1,5 +1,6 @@
 import os
 import sys
+from contextlib import asynccontextmanager
 from train_save import train_and_save_model
 from pydantic import BaseModel,Field
 from pprint import pprint
@@ -71,9 +72,24 @@ def load_model_state():
         }
     )
 
-load_model_state()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    應用程式生命週期：uvicorn 綁定埠口後才載入模型，
+    避免 Render 因啟動太慢而判定『Port scan timeout』。
+    """
+    try:
+        load_model_state()
+    except Exception as e:
+        print(f"[警告] 模型載入失敗，預測/訓練端點將回傳錯誤: {e}")
+    yield
 
-app = FastAPI()
+app = FastAPI(lifespan=lifespan)
+
+@app.get("/")
+def root():
+    """根路徑：供 Render 健康檢查使用。"""
+    return {"status": "ok", "service": "salary-predict-api", "docs": "/docs"}
 @app.post("/train", response_model=TrainResult)
 def train_endpoint(config:TrainConfig):
     """
