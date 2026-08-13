@@ -381,6 +381,105 @@ pip install psycopg2-binary python-dotenv pandas scikit-learn joblib
 3. **環境變數來源**：Render 上的 `POSTGRES_URL` 是唯一的連線來源；本機 `.env` 僅供本地開發，兩者值必須一致。
 4. **`salary_model.joblib`**：模型檔可隨 repo 上傳（不含機密），首次啟動若存在則直接載入，不需重新訓練。
 
+### 8.6 使用 `render.yaml`（Blueprint）部署 — Step by Step
+
+> 此法會讓 Render 讀取 repo 內 `backend/08_11/render.yaml` 自動建立服務，重複部署時設定保持一致。以下為完整操作步驟。
+
+**步驟 0：確認檔案齊全（部署前檢查）**
+
+在推上 GitHub 之前，先確認 `backend/08_11/` 內有以下檔案：
+- [ ] `render.yaml`（Blueprint 設定檔，已提供）
+- [ ] `requirements.txt`（完整套件清單，已提供）
+- [ ] `app.py`（入口程式，Start Command 會執行它）
+- [ ] `.gitignore`（內含 `.env`）
+- [ ] `salary_model.joblib`（可選，模型檔）
+
+**步驟 1：把 repo 推到 GitHub**
+
+1. 在終端機切換到專案根目錄（`2026_07_03_tvdi_AI/`）。
+2. 確認 Git 狀態與本次要提交的變更：
+   ```
+   git status
+   ```
+3. 確認 `.env` **沒有**被列在要提交的清單中（若有，代表 `.gitignore` 未生效，先修正再繼續）。
+4. 加入與提交 `backend/08_11` 的變更：
+   ```
+   git add backend/08_11
+   git commit -m "加入 render.yaml 與部署設定"
+   ```
+5. 推送到 GitHub：
+   ```
+   git push
+   ```
+6. 到 GitHub 網頁確認 `backend/08_11/render.yaml` 已經出現。
+
+**步驟 2：進入 Render Blueprint 頁面**
+
+1. 瀏覽器開啟 **https://render.com**。
+2. 登入帳號（與建立 PostgreSQL 的帳號相同）。
+3. 進入 **Dashboard**。
+4. 點擊右上角的 **New** 按鈕。
+5. 在下拉選單中選擇 **Blueprint**（另一個選項是 Web Service，兩者不同）。
+
+**步驟 3：連接 GitHub repository**
+
+1. 若 Render 尚未連接 GitHub，會被導向 GitHub 授權畫面，點擊 **Authorize** / **Install** 授權 Render 存取 repo（選「Only select repositories」並勾選本專案 repo 較安全）。
+2. 授權後，畫面上會列出可用的 repository。
+3. 點擊本專案的 repo（`2026_07_03_tvdi_AI`）。
+4. Render 會自動掃描 repo，找到 `backend/08_11/render.yaml`，並在畫面上列出將要建立的資源。
+
+**步驟 4：確認資源與設定**
+
+Render 會依 `render.yaml` 顯示一筆 Web Service：
+- **Name**：`salary-predict-service`
+- **Runtime**：`Python`
+- **Region**：`Singapore (Southeast Asia)`
+- **Plan**：`Free`
+
+確認後，點擊 **Apply**（或 **Create Resources** / **Create**）按鈕。
+
+**步驟 5：等待首次部署**
+
+1. 點擊建立後，Render 會開始執行 Build：
+   - 依序執行 `pip install -r requirements.txt` 安裝所有套件。
+2. 在 Dashboard 點進 `salary-predict-service`，可在 **Events / Deploys** 分頁看到部署進度。
+3. 等待狀態變成 **Live**（首次部署通常需要數分鐘）。
+4. 若部署失敗，點進失敗的 Deploy 查看 **Logs**，常見原因：
+   - `pip install` 找不到套件 → 檢查 `requirements.txt` 版本是否有效。
+   - 啟動逾時 → 檢查 `app.py` 是否在 `PORT` 指定的 port 監聽 `0.0.0.0`。
+
+**步驟 6：填入 `POSTGRES_URL` 環境變數（必做）**
+
+`render.yaml` 中的 `POSTGRES_URL` 是 `sync: false`，Render **不會**替你填入值，必須手動設定：
+
+1. 進入服務 `salary-predict-service` 的 **Environment** 分頁。
+2. 找到 `POSTGRES_URL` 這一列（Render 已為你建立該變數名稱）。
+3. 在 **Value** 欄位填入完整連線字串（與 `backend/08_11/.env` 相同）：
+   ```
+   postgresql://tvdi_db_user:Pf4Z9Kkm2o8C1XL4e0WArY4GbM2yIbSE@dpg-d9u2qsjm8hqs73ecntug-a.singapore-postgres.render.com/tvdi_db?sslmode=require
+   ```
+4. 點擊 **Save Changes**（若沒有 Value 欄位，可點 **Add Environment Variable** 自行新增，Key 為 `POSTGRES_URL`）。
+5. Render 會自動觸發一次重新部署，等待部署完成至 **Live**。
+
+**步驟 7：驗證部署結果**
+
+1. 在服務 **Overview** 分頁找到網址（格式為 `https://salary-predict-service.onrender.com`）。
+2. 用瀏覽器或 Postman 依序驗證：
+   - `GET /health` → `{"status":"ok",...}`
+   - `GET /docs` → Swagger 文件
+   - `GET /model-info` → 模型資訊
+   - `POST /predict` → 輸入特徵回傳預測年薪
+   - `POST /train` → 重新訓練成功
+   - 根路徑 `/` → Gradio UI
+3. 全部正常即部署完成。
+
+**步驟 8：後續更新（重新部署）**
+
+每次要更新程式，只需：
+1. 修改程式碼後 commit 並 push 到 GitHub。
+2. 到 Render 服務頁面點擊 **Manual Deploy** → **Deploy latest commit**。
+3. 等待部署至 **Live** 即可。
+
 ---
 
 ## 9. 附錄：重要路徑與參考資訊
