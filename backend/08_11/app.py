@@ -281,6 +281,7 @@ RWD_CSS = """
     color: #111111 !important;
 }
 .rwd-card {
+    background-color: #ffffff;
     padding: 22px;
     border-radius: 12px;
     text-align: center;
@@ -346,6 +347,10 @@ RWD_CSS = """
 
 /* ---------- 橫條圖 (貢獻度 / 特徵權重) ---------- */
 .rwd-bars {
+    background-color: #ffffff;
+    padding: 14px;
+    border-radius: 10px;
+    border: 1px solid #e0e0e0;
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -471,7 +476,9 @@ def make_contribution_bars(contrib: dict[str, float]) -> str:
             </div>
         </div>""")
     return ('<div style="display:flex;flex-direction:column;gap:14px;margin-top:4px;'
-            'width:100%;max-width:100%;box-sizing:border-box;">' + "".join(items) + "</div>")
+            'width:100%;max-width:100%;box-sizing:border-box;'
+            'background-color:#ffffff;padding:14px;border-radius:10px;border:1px solid #e0e0e0;">'
+            + "".join(items) + "</div>")
 
 
 def make_metrics_card(info: dict) -> str:
@@ -532,7 +539,9 @@ def make_coef_chart(feature_coefs: dict[str, float]) -> str:
             </div>
         </div>""")
     return ('<div style="display:flex;flex-direction:column;gap:12px;margin-top:4px;'
-            'width:100%;max-width:100%;box-sizing:border-box;">' + "".join(items) + "</div>")
+            'width:100%;max-width:100%;box-sizing:border-box;'
+            'background-color:#ffffff;padding:14px;border-radius:10px;border:1px solid #e0e0e0;">'
+            + "".join(items) + "</div>")
 
 
 def make_error_html(msg: str) -> str:
