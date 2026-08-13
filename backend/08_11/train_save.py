@@ -2,10 +2,51 @@ import os
 import pandas as pd
 import time
 import joblib
+import psycopg2
+from dotenv import load_dotenv
 from pandas import DataFrame
 from sklearn.preprocessing import OrdinalEncoder,OneHotEncoder,StandardScaler
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import Lasso,Ridge,LinearRegression
+
+def load_dataset_from_db() -> DataFrame:
+    """
+    從 Render 雲端 PostgreSQL (tvdi_db) 的 salary_data2 資料表讀取訓練資料。
+    連線字串從 .env 檔的 POSTGRES_URL 環境變數取得，避免密碼寫死在程式碼中。
+    """
+    # 載入 .env 檔（把 POSTGRES_URL 讀入程式環境）
+    load_dotenv()
+
+    connection_string = os.getenv("POSTGRES_URL")
+    if connection_string is None:
+        raise RuntimeError("找不到 POSTGRES_URL 環境變數，請確認 .env 檔案是否存在且內容正確。")
+
+    try:
+        conn = psycopg2.connect(connection_string)
+    except psycopg2.OperationalError as e:
+        raise RuntimeError(
+            f"無法連線到 PostgreSQL (請確認 Render 資料庫已啟動、連線字串正確): {e}"
+        ) from e
+
+    try:
+        cur = conn.cursor()
+        try:
+            cur.execute(
+                'SELECT "YearsExperience", "EducationLevel", "City", "Salary" FROM salary_data2'
+            )
+            rows = cur.fetchall()
+            col_names = [desc[0] for desc in cur.description]
+        finally:
+            cur.close()
+        data: DataFrame = pd.DataFrame(rows, columns=col_names)
+    finally:
+        conn.close()
+
+    if data.empty:
+        raise RuntimeError("salary_data2 資料表沒有任何資料，無法訓練模型。")
+
+    return data
+
 
 def train_and_save_model(
     test_size:float = 0.2,
@@ -26,13 +67,10 @@ def train_and_save_model(
     回傳:
         包含訓練指標、權重與花費時間的字典。
     """
-    # 取得csv的絕對路徑
-    current_dir = os.path.dirname(os.path.abspath(__file__))    
-    csv_path:str = os.path.join(current_dir, "Salary_Data2.csv")
-    if not os.path.exists(csv_path):
-        raise FileNotFoundError(f"找不到數據集檔案: {csv_path}")
-
-    data:DataFrame = pd.read_csv(csv_path)
+    # 從 Render PostgreSQL 的 salary_data2 資料表讀取資料集
+    data: DataFrame = load_dataset_from_db()
+    # 目前檔案的絕對路徑（用於儲存模型）
+    current_dir = os.path.dirname(os.path.abspath(__file__))
     # 開始的時間
     start_time:float = time.time()
     # ----------------------------------------------------

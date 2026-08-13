@@ -585,7 +585,7 @@ def train_gradio_handler(model_type, alpha, test_size, random_state):
         return (
             "### 📢 最新狀態: `❌ 線上訓練失敗`",
             make_error_html(err),
-            make_error_html("請確認資料集 (Salary_Data2.csv) 與模型檔案正確"),
+            make_error_html("請確認 PostgreSQL 連線與 salary_data2 資料表正確"),
         )
 
 

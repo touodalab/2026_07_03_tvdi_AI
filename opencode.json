@@ -1,0 +1,19 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "instructions": [
+    "AGENTS.md"
+  ],
+  "mcp": {
+    "postgres": {
+      "type": "local",
+      "command": [
+        "npx",
+        "-y",
+        "@henkey/postgres-mcp-server@1.0.7",
+        "--connection-string",
+        "postgresql://tvdi_db_user:Pf4Z9Kkm2o8C1XL4e0WArY4GbM2yIbSE@dpg-d9u2qsjm8hqs73ecntug-a.singapore-postgres.render.com/tvdi_db?sslmode=require"
+      ],
+      "enabled": true
+    }
+  }
+}

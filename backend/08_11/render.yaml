@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: salary-predict-service
+    runtime: python
+    plan: free
+    region: singapore
+    rootDir: backend/08_11
+    buildCommand: pip install -r requirements.txt
+    startCommand: python app.py
+    healthCheckPath: /health
+    envVars:
+      - key: POSTGRES_URL
+        sync: false
